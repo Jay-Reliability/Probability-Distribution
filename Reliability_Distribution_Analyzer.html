@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probability Distribution Function Graph V1.0</title>
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Window Container mimicking GUI app */
+        .app-window {
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Title Bar */
+        .title-bar {
+            background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .title-bar .version-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        /* Top Control Bar (Responsive Flex so buttons never clip/disappear) */
+        .control-frame {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            background-color: #eeeeee;
+            border-bottom: 1px solid #d5d5d5;
+        }
+
+        /* Distribution Selector Block */
+        .dist-select-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #ffffff;
+            padding: 10px 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .dist-select-group label {
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .dist-select-group select {
+            font-size: 14px;
+            padding: 6px 10px;
+            border: 1px solid #999;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+            min-width: 145px;
+        }
+
+        /* LabelFrame equivalent (fieldset) */
+        fieldset.label-frame {
+            border: 1px solid #bbb;
+            border-radius: 6px;
+            padding: 8px 14px 12px 14px;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 64px;
+        }
+
+        fieldset.label-frame legend {
+            font-size: 12px;
+            font-weight: bold;
+            color: #444;
+            padding: 0 6px;
+        }
+
+        .param-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .param-group label {
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .param-group input {
+            width: 78px;
+            padding: 5px 7px;
+            font-size: 13px;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+            text-align: right;
+        }
+
+        .param-group input:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 3px rgba(33, 150, 243, 0.4);
+        }
+
+        /* Action Buttons Frame */
+        .btn-frame {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 6px 8px;
+            align-items: stretch;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 7px 14px;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.05s;
+            white-space: nowrap;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-plot {
+            background-color: #4CAF50; /* Green */
+            min-width: 135px;
+        }
+
+        .btn-csv {
+            background-color: #FF9800; /* Orange / Amber */
+            min-width: 135px;
+        }
+
+        .btn-save {
+            background-color: #2196F3; /* Blue */
+            min-width: 135px;
+        }
+
+        .btn-exit {
+            background-color: #f44336; /* Red */
+            min-width: 75px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        /* Graph Area */
+        .graph-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 18px;
+            background-color: #ffffff;
+            min-height: 520px;
+        }
+
+        .chart-box {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background-color: #fff;
+            min-height: 480px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Status & Data Preview Bar */
+        .status-bar {
+            background-color: #e9ecef;
+            border-top: 1px solid #d5d5d5;
+            padding: 8px 18px;
+            font-size: 12px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 960px) {
+            .graph-container {
+                grid-template-columns: 1fr;
+            }
+            .btn-frame {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-window" id="appWindow">
+    <!-- 1) GUI 창 제목: Probability Distribution Function Graph V1.0 -->
+    <div class="title-bar">
+        <span>Probability Distribution Function Graph V1.0</span>
+        <span class="version-badge">Reliability Distribution Analyzer</span>
+    </div>
+
+    <!-- 상단 컨트롤 프레임 (입력부) -->
+    <div class="control-frame">
+        <!-- 2) 확률분포 선택 Dropdown -->
+        <div class="dist-select-group">
+            <label for="distSelect">확률분포 선택:</label>
+            <select id="distSelect" onchange="onDistChange()">
+                <option value="선택하세요">선택하세요</option>
+                <option value="정규분포" selected>정규분포</option>
+                <option value="Weibull 분포">Weibull 분포</option>
+                <option value="대수정규분포">대수정규분포</option>
+                <option value="지수분포">지수분포</option>
+            </select>
+        </div>
+
+        <!-- 3-1) 모수 입력 프레임 (동적 생성) -->
+        <fieldset class="label-frame" id="paramFrame">
+            <legend>모수 입력</legend>
+            <div id="paramInputsContainer" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                <!-- 동적 생성 영역 -->
+            </div>
+        </fieldset>
+
+        <!-- 3-2) X축 범위 및 간격 프레임 -->
+        <fieldset class="label-frame">
+            <legend>X축 범위 및 간격</legend>
+            <div class="param-group">
+                <label for="xMin">최소값:</label>
+                <input type="number" id="xMin" value="0" step="any">
+            </div>
+            <div class="param-group">
+                <label for="xMax">최대값:</label>
+                <input type="number" id="xMax" value="100" step="any">
+            </div>
+            <div class="param-group">
+                <label for="xStep">Step:</label>
+                <input type="number" id="xStep" value="0.1" step="any">
+            </div>
+        </fieldset>
+
+        <!-- 버튼 프레임 (그래프 그리기, 데이터(CSV) 저장, 그래프 저장, 종료) -->
+        <div class="btn-frame">
+            <div class="btn-stack">
+                <button class="btn btn-plot" onclick="plotGraphs()">그래프 그리기</button>
+                <button class="btn btn-csv" onclick="saveCSV()">데이터(CSV) 저장</button>
+                <button class="btn btn-save" onclick="saveGraphImage()">그래프 저장</button>
+            </div>
+            <button class="btn btn-exit" onclick="exitApp()">종료</button>
+        </div>
+    </div>
+
+    <!-- 4) 그래프 출력 프레임 (좌: PDF, 우: CDF) -->
+    <div class="graph-container">
+        <div id="pdfChart" class="chart-box"></div>
+        <div id="cdfChart" class="chart-box"></div>
+    </div>
+
+    <!-- 하단 상태 표시줄 -->
+    <div class="status-bar">
+        <span id="statusText">준비 완료. 그래프 선 위에 마우스를 올리면 (X, Y) 좌표가 표시됩니다.</span>
+        <span id="dataSummary"></span>
+    </div>
+</div>
+
+<!-- 통합 그래프 이미지 저장을 위한 숨김 캔버스 -->
+<canvas id="exportCanvas" style="display:none;"></canvas>
+
+<script>
+    // 현재 계산된 그래프 데이터를 보관하는 전역 상태
+    let currentData = {
+        dist: null,
+        distPrefix: null,
+        x: [],
+        pdf: [],
+        cdf: []
+    };
+
+    // 오차함수 (Error Function, erf) 근사식 - 정규분포 및 대수정규분포 CDF 계산용 (Abramowitz and Stegun 7.1.26)
+    function erf(x) {
+        const sign = (x >= 0) ? 1 : -1;
+        x = Math.abs(x);
+
+        const a1 =  0.254829592;
+        const a2 = -0.284496736;
+        const a3 =  1.421413741;
+        const a4 = -1.453152027;
+        const a5 =  1.061405429;
+        const p  =  0.3275911;
+
+        const t = 1.0 / (1.0 + p * x);
+        const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+        return sign * y;
+    }
+
+    // 1. 정규분포 (Normal Distribution): loc = mean, scale = std
+    function normalPDF(x, mean, std) {
+        const z = (x - mean) / std;
+        return (1.0 / (std * Math.sqrt(2.0 * Math.PI))) * Math.exp(-0.5 * z * z);
+    }
+
+    function normalCDF(x, mean, std) {
+        return 0.5 * (1.0 + erf((x - mean) / (std * Math.sqrt(2.0))));
+    }
+
+    // 2. Weibull 분포 (Weibull_min Distribution): c = shape, scale = scale
+    function weibullPDF(x, shape, scale) {
+        if (x < 0) return 0.0;
+        if (x === 0) {
+            if (shape < 1) return Infinity;
+            if (shape === 1) return 1.0 / scale;
+            return 0.0;
+        }
+        const u = x / scale;
+        return (shape / scale) * Math.pow(u, shape - 1.0) * Math.exp(-Math.pow(u, shape));
+    }
+
+    function weibullCDF(x, shape, scale) {
+        if (x <= 0) return 0.0;
+        return 1.0 - Math.exp(-Math.pow(x / scale, shape));
+    }
+
+    // 3. 대수정규분포 (Lognormal Distribution): s = sigma, scale = exp(mu)
+    function lognormPDF(x, mu, sigma) {
+        if (x <= 0) return 0.0;
+        const z = (Math.log(x) - mu) / sigma;
+        return (1.0 / (x * sigma * Math.sqrt(2.0 * Math.PI))) * Math.exp(-0.5 * z * z);
+    }
+
+    function lognormCDF(x, mu, sigma) {
+        if (x <= 0) return 0.0;
+        return 0.5 * (1.0 + erf((Math.log(x) - mu) / (sigma * Math.sqrt(2.0))));
+    }
+
+    // 4. 지수분포 (Exponential Distribution): scale = 1 / lambda
+    function exponPDF(x, lam) {
+        if (x < 0) return 0.0;
+        return lam * Math.exp(-lam * x);
+    }
+
+    function exponCDF(x, lam) {
+        if (x < 0) return 0.0;
+        return 1.0 - Math.exp(-lam * x);
+    }
+
+    // 선택된 확률분포에 따라 동적으로 모수 입력창 생성
+    function updateParamInputs() {
+        const dist = document.getElementById('distSelect').value;
+        const container = document.getElementById('paramInputsContainer');
+        container.innerHTML = '';
+
+        let params = [];
+        if (dist === '정규분포') {
+            params = [
+                { id: 'param_mean', label: '평균', defaultVal: '0' },
+                { id: 'param_std', label: '표준편차', defaultVal: '1' }
+            ];
+        } else if (dist === 'Weibull 분포') {
+            params = [
+                { id: 'param_shape', label: '형상모수(Shape)', defaultVal: '2' },
+                { id: 'param_scale', label: '척도모수(Scale)', defaultVal: '10' }
+            ];
+        } else if (dist === '대수정규분포') {
+            params = [
+                { id: 'param_mu', label: '위치모수(μ)', defaultVal: '0' },
+                { id: 'param_sigma', label: '척도모수(σ)', defaultVal: '1' }
+            ];
+        } else if (dist === '지수분포') {
+            params = [
+                { id: 'param_lambda', label: '고장률(λ)', defaultVal: '0.1' }
+            ];
+        } else {
+            const emptyMsg = document.createElement('span');
+            emptyMsg.style.fontSize = '13px';
+            emptyMsg.style.color = '#777';
+            emptyMsg.textContent = '확률분포를 먼저 선택하세요.';
+            container.appendChild(emptyMsg);
+            return;
+        }
+
+        params.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'param-group';
+
+            const lbl = document.createElement('label');
+            lbl.setAttribute('for', p.id);
+            lbl.textContent = p.label + ':';
+
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.id = p.id;
+            inp.value = p.defaultVal;
+            inp.step = 'any';
+
+            div.appendChild(lbl);
+            div.appendChild(inp);
+            container.appendChild(div);
+        });
+    }
+
+    function onDistChange() {
+        updateParamInputs();
+    }
+
+    // CSV 컬럼명 접두사 매핑 ("확률분포_" + PDF or CDF)
+    function getDistColumnPrefix(dist) {
+        if (dist === 'Weibull 분포') return 'Weibull';
+        if (dist === '정규분포') return '정규분포';
+        if (dist === '대수정규분포') return '대수정규분포';
+        if (dist === '지수분포') return '지수분포';
+        return dist;
+    }
+
+    // 그래프 그리기
+    function plotGraphs() {
+        const dist = document.getElementById('distSelect').value;
+        if (dist === '선택하세요') {
+            alert('경고: 확률분포를 선택해주세요.');
+            return;
+        }
+
+        const xMin = parseFloat(document.getElementById('xMin').value);
+        const xMax = parseFloat(document.getElementById('xMax').value);
+        const xStep = parseFloat(document.getElementById('xStep').value);
+
+        if (isNaN(xMin) || isNaN(xMax) || isNaN(xStep)) {
+            alert('입력 오류: X축 범위 및 Step 값은 유효한 숫자여야 합니다.');
+            return;
+        }
+
+        if (xMin >= xMax || xStep <= 0) {
+            alert('입력 오류: X축 범위(최소값 < 최대값) 또는 Step(0보다 큰 값) 설정이 올바르지 않습니다.');
+            return;
+        }
+
+        // np.arange(x_min, x_max + x_step, x_step)와 동일한 배열 생성 (부동소수점 오차 보정)
+        const xValues = [];
+        const numSteps = Math.floor((xMax + xStep - xMin) / xStep + 1e-9);
+        for (let i = 0; i <= numSteps; i++) {
+            const val = Number((xMin + i * xStep).toFixed(10));
+            if (val <= xMax + xStep * 0.5) {
+                xValues.push(val);
+            }
+        }
+
+        const yPDF = [];
+        const yCDF = [];
+
+        try {
+            if (dist === '정규분포') {
+                const mean = parseFloat(document.getElementById('param_mean').value);
+                const std = parseFloat(document.getElementById('param_std').value);
+                if (isNaN(mean) || isNaN(std) || std <= 0) {
+                    throw new Error('평균은 유효한 숫자여야 하며, 표준편차는 0보다 커야 합니다.');
+                }
+                for (let x of xValues) {
+                    yPDF.push(normalPDF(x, mean, std));
+                    yCDF.push(normalCDF(x, mean, std));
+                }
+            } else if (dist === 'Weibull 분포') {
+                const shape = parseFloat(document.getElementById('param_shape').value);
+                const scale = parseFloat(document.getElementById('param_scale').value);
+                if (isNaN(shape) || isNaN(scale) || shape <= 0 || scale <= 0) {
+                    throw new Error('형상모수(Shape)와 척도모수(Scale)는 모두 0보다 커야 합니다.');
+                }
+                for (let x of xValues) {
+                    yPDF.push(weibullPDF(x, shape, scale));
+                    yCDF.push(weibullCDF(x, shape, scale));
+                }
+            } else if (dist === '대수정규분포') {
+                const mu = parseFloat(document.getElementById('param_mu').value);
+                const sigma = parseFloat(document.getElementById('param_sigma').value);
+                if (isNaN(mu) || isNaN(sigma) || sigma <= 0) {
+                    throw new Error('위치모수(μ)는 유효한 숫자여야 하며, 척도모수(σ)는 0보다 커야 합니다.');
+                }
+                for (let x of xValues) {
+                    yPDF.push(lognormPDF(x, mu, sigma));
+                    yCDF.push(lognormCDF(x, mu, sigma));
+                }
+            } else if (dist === '지수분포') {
+                const lam = parseFloat(document.getElementById('param_lambda').value);
+                if (isNaN(lam) || lam <= 0) {
+                    throw new Error('고장률(λ)은 0보다 커야 합니다.');
+                }
+                for (let x of xValues) {
+                    yPDF.push(exponPDF(x, lam));
+                    yCDF.push(exponCDF(x, lam));
+                }
+            }
+        } catch (err) {
+            alert('입력 오류: ' + err.message);
+            return;
+        }
+
+        // 전역 상태 업데이트
+        currentData = {
+            dist: dist,
+            distPrefix: getDistColumnPrefix(dist),
+            x: xValues,
+            pdf: yPDF,
+            cdf: yCDF
+        };
+
+        // PDF 차트 설정
+        const pdfTrace = {
+            x: xValues,
+            y: yPDF,
+            mode: 'lines',
+            name: 'PDF',
+            line: { color: 'blue', width: 2 },
+            hovertemplate: 'X: %{x:.2f}<br>Y: %{y:.4f}<extra></extra>'
+        };
+
+        const pdfLayout = {
+            title: {
+                text: `${dist} - 확률밀도함수(PDF)`,
+                font: { family: 'Malgun Gothic, Arial, sans-serif', size: 16 }
+            },
+            xaxis: {
+                title: 'x',
+                gridcolor: '#e0e0e0',
+                zerolinecolor: '#999'
+            },
+            yaxis: {
+                title: 'Probability Density',
+                gridcolor: '#e0e0e0',
+                zerolinecolor: '#999'
+            },
+            margin: { t: 55, l: 65, r: 30, b: 55 },
+            hovermode: 'closest',
+            hoverlabel: {
+                bgcolor: 'rgba(255, 255, 255, 0.92)',
+                bordercolor: 'blue',
+                font: { family: 'Malgun Gothic, Arial, sans-serif', size: 13, color: '#000' }
+            },
+            plot_bgcolor: '#ffffff',
+            paper_bgcolor: '#ffffff'
+        };
+
+        // CDF 차트 설정
+        const cdfTrace = {
+            x: xValues,
+            y: yCDF,
+            mode: 'lines',
+            name: 'CDF',
+            line: { color: 'red', width: 2 },
+            hovertemplate: 'X: %{x:.2f}<br>Y: %{y:.4f}<extra></extra>'
+        };
+
+        const cdfLayout = {
+            title: {
+                text: `${dist} - 누적확률밀도함수(CDF)`,
+                font: { family: 'Malgun Gothic, Arial, sans-serif', size: 16 }
+            },
+            xaxis: {
+                title: 'x',
+                gridcolor: '#e0e0e0',
+                zerolinecolor: '#999'
+            },
+            yaxis: {
+                title: 'Cumulative Probability',
+                gridcolor: '#e0e0e0',
+                zerolinecolor: '#999'
+            },
+            margin: { t: 55, l: 65, r: 30, b: 55 },
+            hovermode: 'closest',
+            hoverlabel: {
+                bgcolor: 'rgba(255, 255, 255, 0.92)',
+                bordercolor: 'red',
+                font: { family: 'Malgun Gothic, Arial, sans-serif', size: 13, color: '#000' }
+            },
+            plot_bgcolor: '#ffffff',
+            paper_bgcolor: '#ffffff'
+        };
+
+        const config = {
+            responsive: true,
+            displaylogo: false
+        };
+
+        Plotly.newPlot('pdfChart', [pdfTrace], pdfLayout, config);
+        Plotly.newPlot('cdfChart', [cdfTrace], cdfLayout, config);
+
+        document.getElementById('statusText').textContent = `[${dist}] 그래프 출력 완료. 선 위에 마우스를 올리면 (X, Y) 좌표가 표시됩니다.`;
+        document.getElementById('dataSummary').textContent = `데이터 개수: ${xValues.length}개 (X: ${xValues[0]} ~ ${xValues[xValues.length - 1]})`;
+    }
+
+    // 데이터(CSV) 저장 기능 (폴더 및 파일명 지정 대화상자 지원)
+    async function saveCSV() {
+        if (!currentData.x || currentData.x.length === 0) {
+            alert("경고: 저장할 데이터가 없습니다. 먼저 '그래프 그리기'를 실행해주세요.");
+            return;
+        }
+
+        const prefix = currentData.distPrefix;
+        const pdfCol = `${prefix}_PDF`;
+        const cdfCol = `${prefix}_CDF`;
+
+        // CSV 헤더 및 데이터 생성 (소수점 포맷 적용 및 한글 깨짐 방지 UTF-8 BOM 추가)
+        let csvRows = [];
+        csvRows.push(`x,${pdfCol},${cdfCol}`);
+
+        for (let i = 0; i < currentData.x.length; i++) {
+            const xVal = currentData.x[i].toFixed(1);
+            const pdfVal = Number.isFinite(currentData.pdf[i]) ? currentData.pdf[i].toFixed(2) : '0.00';
+            const cdfVal = Number.isFinite(currentData.cdf[i]) ? currentData.cdf[i].toFixed(2) : '0.00';
+            csvRows.push(`${xVal},${pdfVal},${cdfVal}`);
+        }
+
+        const csvString = '\uFEFF' + csvRows.join('\r\n');
+        const defaultFileName = `${prefix}_data.csv`;
+
+        // 브라우저가 File System Access API (showSaveFilePicker)를 지원하는 경우 폴더/파일명 선택 대화상자 실행
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: defaultFileName,
+                    types: [{
+                        description: 'CSV Files (*.csv)',
+                        accept: { 'text/csv': ['.csv'] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(csvString);
+                await writable.close();
+                alert(`저장 완료: 데이터가 성공적으로 저장되었습니다.\n파일명: ${handle.name}`);
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return; // 사용자가 취소한 경우
+                console.warn('File picker error, falling back to download:', err);
+            }
+        }
+
+        // 구형 브라우저 또는 보안 컨텍스트 제한 시 파일명 입력 후 다운로드
+        const userFileName = prompt('저장할 CSV 파일 이름을 입력하세요:', defaultFileName);
+        if (!userFileName) return;
+
+        const finalName = userFileName.toLowerCase().endsWith('.csv') ? userFileName : userFileName + '.csv';
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 그래프 저장 기능 (PDF와 CDF를 하나의 고해상도 이미지로 병합하여 저장)
+    async function saveGraphImage() {
+        if (!currentData.x || currentData.x.length === 0) {
+            alert("경고: 저장할 그래프가 없습니다. 먼저 '그래프 그리기'를 실행해주세요.");
+            return;
+        }
+
+        try {
+            const pdfDiv = document.getElementById('pdfChart');
+            const cdfDiv = document.getElementById('cdfChart');
+
+            const width = 800;
+            const height = 500;
+
+            const pdfDataUrl = await Plotly.toImage(pdfDiv, { format: 'png', width: width, height: height, scale: 2 });
+            const cdfDataUrl = await Plotly.toImage(cdfDiv, { format: 'png', width: width, height: height, scale: 2 });
+
+            const canvas = document.getElementById('exportCanvas');
+            canvas.width = width * 2 * 2; // 좌우 2개 차트 * scale 2
+            canvas.height = height * 2;
+            const ctx = canvas.getContext('2d');
+
+            // 흰색 배경 채우기
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const loadImage = (src) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+
+            const [imgPdf, imgCdf] = await Promise.all([loadImage(pdfDataUrl), loadImage(cdfDataUrl)]);
+            ctx.drawImage(imgPdf, 0, 0);
+            ctx.drawImage(imgCdf, width * 2, 0);
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+            const defaultFileName = 'distribution_graph.jpg';
+
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: defaultFileName,
+                        types: [
+                            { description: 'JPEG Image (*.jpg)', accept: { 'image/jpeg': ['.jpg', '.jpeg'] } },
+                            { description: 'PNG Image (*.png)', accept: { 'image/png': ['.png'] } }
+                        ]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    alert(`저장 완료: 그래프가 성공적으로 저장되었습니다.\n파일명: ${handle.name}`);
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                }
+            }
+
+            const userFileName = prompt('저장할 그래프 이미지 파일 이름을 입력하세요:', defaultFileName);
+            if (!userFileName) return;
+            const finalName = (userFileName.toLowerCase().endsWith('.jpg') || userFileName.toLowerCase().endsWith('.png'))
+                ? userFileName
+                : userFileName + '.jpg';
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('그래프를 저장하는 중 오류가 발생했습니다:\n' + err.message);
+        }
+    }
+
+    // 종료 버튼 기능
+    function exitApp() {
+        if (confirm('프로그램을 종료하시겠습니까?')) {
+            window.close();
+            // 브라우저 보안 정책으로 탭 닫기가 차단된 경우 종료 화면 표시
+            document.getElementById('appWindow').innerHTML = `
+                <div style="padding: 60px 20px; text-align: center; background: #fff;">
+                    <h2 style="color: #1e3c72; margin-bottom: 12px;">Probability Distribution Function Graph V1.0</h2>
+                    <p style="color: #555; font-size: 15px; margin-bottom: 20px;">프로그램이 종료되었습니다. 브라우저 탭을 닫으셔도 됩니다.</p>
+                    <button class="btn btn-plot" onclick="location.reload()">다시 시작하기</button>
+                </div>
+            `;
+        }
+    }
+
+    // 초기 실행 시 default 값으로 모수 입력창 생성 및 그래프 자동 검증 출력
+    window.addEventListener('DOMContentLoaded', () => {
+        updateParamInputs();
+        plotGraphs();
+    });
+</script>
+
+</body>
+</html>
